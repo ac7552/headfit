@@ -2,14 +2,14 @@
  {
   "id": "made-up-1",
   "label": "Made-up face 1",
-  "about": "neutral",
+  "about": "freckles, short hair",
   "width": 900,
   "height": 900
  },
  {
   "id": "made-up-2",
   "label": "Made-up face 2",
-  "about": "neutral, turned a little",
+  "about": "stubble, turned a little",
   "width": 900,
   "height": 900
  },
@@ -24,6 +24,20 @@
   "id": "made-up-4",
   "label": "Made-up face 4",
   "about": "taken at arm's length",
+  "width": 900,
+  "height": 900
+ },
+ {
+  "id": "made-up-5",
+  "label": "Made-up face 5",
+  "about": "neutral",
+  "width": 900,
+  "height": 900
+ },
+ {
+  "id": "made-up-6",
+  "label": "Made-up face 6",
+  "about": "fair, fuller hair",
   "width": 900,
   "height": 900
  }

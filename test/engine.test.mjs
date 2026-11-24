@@ -83,9 +83,9 @@ test("a known bend of the template is found again from its pins", () => {
 });
 
 test("a drawn made-up face: pins met, smile read, photo painted", () => {
-  const photo = madeUpPhoto(head, { seed: 3, look: LOOKS[1], smile: 0.6, size: 600 });
-  const fit = fitHead(head, [{ kind: "front", width: 600, height: 600, pins: photo.pins }]);
-  assert.ok(fit.report.meanPixels < 2, `mean ${fit.report.meanPixels} px on a 600 px photo`);
+  const photo = madeUpPhoto(head, { seed: 3, look: LOOKS[1], smile: 0.6, size: 500, aa: 1 });
+  const fit = fitHead(head, [{ kind: "front", width: 500, height: 500, pins: photo.pins }]);
+  assert.ok(fit.report.meanPixels < 2, `mean ${fit.report.meanPixels} px on a 500 px photo`);
   assert.ok((fit.weights.mouthSmile_L || 0) > 0.3 && (fit.weights.mouthSmile_R || 0) > 0.3, `smile read: ${JSON.stringify(fit.weights)}`);
   assert.ok(!fit.weights.jawOpen, "a closed mouth reads as closed");
   const tex = bakeSkin(head, fit, [photo.image], { size: 256 });
@@ -97,7 +97,7 @@ test("a drawn made-up face: pins met, smile read, photo painted", () => {
 });
 
 test("three clicks give a first guess near the true pins", () => {
-  const { pins } = madeUpPhoto(head, { seed: 5, size: 900, hair: false });
+  const { pins } = madeUpPhoto(head, { seed: 5, size: 900, draw: false });
   const mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
   const clicks = [mid(pins.eyeOuterRight, pins.eyeInnerRight), mid(pins.eyeInnerLeft, pins.eyeOuterLeft), mid(pins.mouthRight, pins.mouthLeft)];
   const start = startFront(head, clicks);

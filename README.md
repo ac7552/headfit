@@ -13,8 +13,9 @@ python3 -m http.server 8790
 ```
 
 Open <http://localhost:8790/web/>. Try a sample face, or choose a photo: click the middle of each eye and the mouth,
-then drag the 41 pins onto their spots. The samples are made up (the same head, bent and painted by
-`src/synth.js`), not photos of anyone. Red pins are
+then drag the 41 pins onto their spots. The six samples are made up, not photos of anyone: `src/synth.js` bends
+the head by a known amount, paints its skin (pores, blush, freckles, stubble, brows, lips), and lights and draws it
+like a studio portrait, with soft shadows, skin sheen, glossy eyes and short hair. Red pins are
 spots; blue pins slide along an outline (the jaw line, the rim of an ear), so only how far out they sit matters. A
 side photo is optional. **Download .glb** saves the head (metres, textures included).
 
@@ -59,12 +60,12 @@ true shape is known, the error is in millimetres (root mean square over the fron
 
 | | template | fitted, camera estimated | fitted, camera known |
 |---|---|---|---|
-| face shape error | 1.67 mm | 1.48 mm | 1.25 mm |
+| face shape error | 1.69 mm | 1.56 mm | 1.28 mm |
 
-- **Hidden pins** (one left out at a time; how far the fitted head puts that spot, as % of eye width): 1.8 % for
-  the template posed by the same camera, 0.9 % fitted. The chin goes from 2.6 to 1.0 %, the outer eye corner from
-  2.7 to 0.6 %.
-- **Smile**: a smile of 0.5 reads back as 0.29 on average, and no smile as 0.01. Pin error and the bend both
+- **Hidden pins** (one left out at a time; how far the fitted head puts that spot, as % of eye width): 1.9 % for
+  the template posed by the same camera, 0.9 % fitted. The chin goes from 3.0 to 1.1 %, the outer eye corner from
+  2.8 to 0.6 %.
+- **Smile**: a smile of 0.5 reads back as 0.31 on average, and no smile as 0.01. Pin error and the bend both
   soak up part of a smile.
 - **One photo** can't tell a slightly wrong tilt of the camera from a different depth of face, which is most of
   the gap between the last two columns. With a side photo too, the cameras are posed again on the bent head a
@@ -78,7 +79,9 @@ fitted head meets the pins to within about 2 pixels.
 - Longer hair. Hair cards fitted to the head: MakeHuman's CC0 system hair (its asset repository uses Git LFS and
   wasn't reachable from here) or MetaHuman hair exported from Unreal.
 - Side photos: the code path exists but has no samples or measured results yet.
-- Reading a smile fully (0.5 reads as 0.29).
+- Reading a smile fully (0.5 reads as 0.31).
+- More lifelike made-up faces: they still read as computer-drawn (longer hair, skin detail from openly licensed
+  texture photos).
 - Posing the camera and bending the face together (the pose that needs the least bending), to help one-photo depth.
 - Saving heads in the browser between visits.
 

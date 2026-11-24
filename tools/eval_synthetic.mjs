@@ -30,7 +30,7 @@ function shapeError(P, T) {
 const rows = [];
 for (let i = 0; i < heads; i++) {
   const smile = i % 3 === 0 ? 0.5 : 0;
-  const photo = madeUpPhoto(head, { seed: 100 + i, look: LOOKS[i % LOOKS.length], smile, size: SIZE, distance: i % 4 === 3 ? 45 : 120, hair: false });
+  const photo = madeUpPhoto(head, { seed: 100 + i, look: LOOKS[i % LOOKS.length], smile, size: SIZE, distance: i % 4 === 3 ? 45 : 120, draw: false });
   const rand = seeded(500 + i);
   const gauss = () => Math.sqrt(-2 * Math.log(rand() + 1e-12)) * Math.cos(2 * Math.PI * rand());
   const pins = Object.fromEntries(Object.entries(photo.pins).map(([k, [x, y]]) => [k, [x + noise * gauss(), y + noise * gauss()]]));
