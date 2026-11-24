@@ -6,6 +6,7 @@ import { hairShell } from "../src/hair.js";
 import { readHead, vertexNormals } from "../src/head.js";
 import { PINS, pinsFromPoints, SIDE_PINS } from "../src/pins.js";
 import { FRONT_CLICKS, SIDE_CLICKS, startFront, startSide } from "../src/start.js";
+import { growHair, STRAND_STYLES } from "../src/strands.js";
 
 const MAX_SIDE = 1600; // photos are scaled to at most this many pixels across before pinning
 const $ = (id) => document.getElementById(id);
@@ -81,6 +82,7 @@ $("sample").addEventListener("change", async (e) => {
     ? Object.fromEntries(Object.entries(tem.pins).map(([name, [x, y]]) => [name, [x * k, y * k]]))
     : pinsFromPoints(tem.points.map(([x, y]) => [x * k, y * k])).pins;
   if (tem.distance) $("distance").value = tem.distance >= 80 ? "120" : "45";
+  $("ears").checked = Boolean(tem.earsHidden); // long hair covers the ears, so their pins are left out
   photo.clicks = null;
   setView("front");
   state.photos.front = photo;
@@ -497,12 +499,16 @@ function currentPositions() {
 }
 
 function updateHair(P) {
-  if (meshes.hair) {
-    group.remove(meshes.hair);
-    meshes.hair.geometry.dispose();
-    delete meshes.hair;
+  for (const name of ["hair", "strands"]) {
+    if (!meshes[name]) continue;
+    group.remove(meshes[name]);
+    meshes[name].geometry.dispose();
+    delete meshes[name];
   }
-  const shell = hairShell(state.head, P, $("hair").value);
+  // Longer styles are strands grown on this head, over a close-cut layer that covers the scalp.
+  const long = STRAND_STYLES[$("hair").value] ? $("hair").value : null;
+  if (long) addStrands(P, long);
+  const shell = hairShell(state.head, P, long ? "buzz" : $("hair").value);
   if (!shell) return;
   const g = new THREE.BufferGeometry();
   g.setAttribute("position", new THREE.BufferAttribute(shell.position, 3));
@@ -524,6 +530,42 @@ function updateHair(P) {
   group.add(mesh);
 }
 
+function addStrands(P, style) {
+  const hair = growHair(state.head, P, style, { count: 12000, seed: 7 });
+  const per = hair.segments + 1;
+  const pos = new Float32Array(hair.count * hair.segments * 6), col = new Float32Array(hair.count * hair.segments * 6);
+  const light = new THREE.Vector3(0.3, 0.6, 0.75).normalize();
+  const shadeAt = (st, i) => {
+    // Lit across the strand (brightest where it runs square to the light), darker at the roots and inner layers.
+    const a = (st * per + Math.max(0, i - 1)) * 3, b = (st * per + Math.min(per - 1, i + 1)) * 3;
+    const t = new THREE.Vector3(hair.points[b] - hair.points[a], hair.points[b + 1] - hair.points[a + 1], hair.points[b + 2] - hair.points[a + 2]).normalize();
+    const tl = t.dot(light);
+    const across = Math.sqrt(Math.max(0, 1 - tl * tl));
+    const rootward = 0.55 + 0.45 * Math.min(1, i / (per * 0.25));
+    return (0.45 + 0.75 * across ** 3) * rootward * (0.6 + 0.5 * hair.tone[st]) * (0.65 + 0.35 * hair.lift[st]);
+  };
+  let o = 0;
+  for (let st = 0; st < hair.count; st++) {
+    for (let i = 0; i < hair.segments; i++) {
+      for (const j of [i, i + 1]) {
+        const k = (st * per + j) * 3;
+        pos[o] = hair.points[k];
+        pos[o + 1] = hair.points[k + 1];
+        pos[o + 2] = hair.points[k + 2];
+        col[o] = col[o + 1] = col[o + 2] = shadeAt(st, j);
+        o += 3;
+      }
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  g.setAttribute("color", new THREE.BufferAttribute(col, 3));
+  const lines = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: $("hair-colour").value, vertexColors: true, name: "strands" }));
+  lines.name = "strands";
+  meshes.strands = lines;
+  group.add(lines);
+}
+
 const hex = (c) => "#" + c.map((x) => Math.round(Math.max(0, Math.min(255, x))).toString(16).padStart(2, "0")).join("");
 
 function showResult() {
@@ -538,7 +580,7 @@ function showResult() {
     meshes.scleraL.material.needsUpdate = true;
     if (r.hair && !state.hairColourSet) {
       $("hair-colour").value = hex(r.hair);
-      if (meshes.hair) meshes.hair.material.color.set(hex(r.hair));
+      for (const name of ["hair", "strands"]) if (meshes[name]) meshes[name].material.color.set(hex(r.hair));
     }
   }
   $("download").disabled = false;
@@ -563,7 +605,7 @@ for (const b of document.querySelectorAll("[data-expression]")) {
 $("hair").addEventListener("change", () => state.head && updateHair(currentPositions()));
 $("hair-colour").addEventListener("input", (e) => {
   state.hairColourSet = true;
-  if (meshes.hair) meshes.hair.material.color.set(e.target.value);
+  for (const name of ["hair", "strands"]) if (meshes[name]) meshes[name].material.color.set(e.target.value);
 });
 
 $("download").addEventListener("click", async () => {

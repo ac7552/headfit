@@ -16,7 +16,8 @@ Open <http://localhost:8790/web/>. Try a sample face, or choose a photo: click t
 then drag the 41 pins onto their spots. The six samples are made up, not photos of anyone: `src/synth.js` bends
 the head by a known amount, paints its skin (uneven tone, blush, freckles, stubble, brows, lips), and lights and
 draws it like a studio portrait: a soft key light with shadows, light scattering under the skin, sheen, wet eyes
-under relaxed lids, and short hair drawn strand by strand in layers. Red pins are
+under relaxed lids, and hair drawn strand by strand, cropped on three of them and long on the other three (long
+hair covers the ears, so those samples leave the ear pins out). Red pins are
 spots; blue pins slide along an outline (the jaw line, the rim of an ear), so only how far out they sit matters. A
 side photo is optional. **Download .glb** saves the head (metres, textures included).
 
@@ -47,8 +48,11 @@ node tools/eval_synthetic.mjs 20 2
    photo's lighting is divided out (brightness modelled as ambient plus one soft light over the normals), the
    plain backdrop is kept off the edges, the neck fades to skin tone below the chin, and what no photo sees gets
    the skin's tone.
-6. **Hair** (`src/hair.js`): close-cut hair as a shell over the scalp, tinted from the photo above the forehead.
-   Shaved, buzz cut, short, full on top.
+6. **Hair** (`src/hair.js`, `src/strands.js`): close-cut styles are a shell over the scalp (shaved, buzz cut,
+   short, full on top). Longer styles (bob, shoulder length, long, long and wavy) are about 12,000 strands grown
+   on the fitted head: rooted at random spots on the scalp, combed away from a parting, pulled down by gravity,
+   and kept outside the head, neck and shoulders and out of the face by a few ellipsoids measured from the head.
+   Hair is tinted from the photo above the forehead.
 
 Fitting takes about 0.1 s and painting about 1 s, in a worker.
 
@@ -77,8 +81,8 @@ fitted head meets the pins to within about 2 pixels.
 
 ## Not done yet
 
-- Longer hair. Hair cards fitted to the head: MakeHuman's CC0 system hair (its asset repository uses Git LFS and
-  wasn't reachable from here) or MetaHuman hair exported from Unreal.
+- Better long hair: it is drawn as one-pixel lines in the 3D view with no shadows of its own, it hangs straight
+  beside the face from every angle, and there are no fringes, curls or tied-back styles.
 - Side photos: the code path exists but has no samples or measured results yet.
 - Reading a smile fully (0.5 reads as 0.31).
 - Made-up faces that pass for photos: they still read as computer-drawn. Longer hair, more varied face shapes
@@ -89,7 +93,7 @@ fitted head meets the pins to within about 2 pixels.
 ## Layout
 
 - `src/` the engine, plain ES modules shared by the page and Node: `head.js`, `pins.js`, `camera.js`, `warp.js`,
-  `fit.js`, `start.js` (first guesses from three clicks), `bake.js`, `raster.js`, `hair.js`, `synth.js` (made-up
+  `fit.js`, `start.js` (first guesses from three clicks), `bake.js`, `raster.js`, `hair.js`, `strands.js`, `synth.js` (made-up
   faces), `linalg.js`
 - `web/` the page: `index.html`, `app.js`, `worker.js`, `style.css`, samples, vendored three.js
 - `data/` the packed ICT head

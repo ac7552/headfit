@@ -11,6 +11,7 @@ import { boxBlur } from "./bake.js";
 import { earClearance, hairlineWeight, hairShell } from "./hair.js";
 import { CURVES, PINS, pointOf, regionFor } from "./pins.js";
 import { rasterTriangle } from "./raster.js";
+import { growHair } from "./strands.js";
 
 // ---------------------------------------------------------------- randomness and noise
 
@@ -441,7 +442,7 @@ function occlusion(head, positions, normals) {
 }
 
 // A depth map of the head as the key light sees it, for soft shadows. Returns X => fraction lit (0..1).
-function shadowMap(head, positions, dir, size = 1024) {
+function shadowMap(head, positions, dir, size = 1024, hair = null) {
   const up = Math.abs(dir[1]) > 0.9 ? [1, 0, 0] : [0, 1, 0];
   const U = normalise(cross(up, dir)), V = cross(dir, U);
   let minU = Infinity, maxU = -Infinity, minV = Infinity, maxV = -Infinity;
@@ -470,20 +471,54 @@ function shadowMap(head, positions, dir, size = 1024) {
       if (d > depth[i]) depth[i] = d;
     });
   }
+  // Long hair shades the face, the neck and itself: each strand goes into a map of its own as a ribbon about a
+  // millimetre wide. On skin its shadow is soft and partial, as light gets through a head of hair.
+  const hairDepth = hair ? new Float32Array(S * S).fill(-Infinity) : null;
+  if (hair) {
+    const per = hair.segments + 1;
+    const hw = Math.max(0.7, 0.06 * scale);
+    for (let st = 0; st < hair.count; st++) {
+      let A = toMap([hair.points[st * per * 3], hair.points[st * per * 3 + 1], hair.points[st * per * 3 + 2]]);
+      for (let i = 1; i < per; i++) {
+        const o = (st * per + i) * 3;
+        const B = toMap([hair.points[o], hair.points[o + 1], hair.points[o + 2]]);
+        const dx = B[0] - A[0], dy = B[1] - A[1];
+        const l = Math.hypot(dx, dy);
+        if (l > 1e-6) {
+          const px = (-dy / l) * hw, py = (dx / l) * hw;
+          const a1 = [A[0] + px, A[1] + py], a2 = [A[0] - px, A[1] - py], b1 = [B[0] + px, B[1] + py], b2 = [B[0] - px, B[1] - py];
+          const put = (x, y, t) => {
+            const d = A[2] + (B[2] - A[2]) * t;
+            const k = y * S + x;
+            if (d > hairDepth[k]) hairDepth[k] = d;
+          };
+          rasterTriangle(a1, a2, b1, S, S, (x, y, w0, w1, w2) => put(x, y, w2));
+          rasterTriangle(a2, b2, b1, S, S, (x, y, w0, w1, w2) => put(x, y, w1 + w2));
+        }
+        A = B;
+      }
+    }
+  }
   // A wide light (a softbox): 49 taps over about 0.4 cm either way. The point is lifted off the surface along its
   // normal first, so the surface doesn't shadow itself.
   const bias = 0.2;
-  return (X, n = null) => {
-    const [mx, my, d] = toMap(n ? [X[0] + 0.25 * n[0], X[1] + 0.25 * n[1], X[2] + 0.25 * n[2]] : X);
+  const taps = (map, mx, my, d, step) => {
     let lit = 0;
     for (let dy = -3; dy <= 3; dy++) {
       for (let dx = -3; dx <= 3; dx++) {
-        const ix = Math.round(mx + dx * 3), iy = Math.round(my + dy * 3);
-        const occ = ix >= 0 && iy >= 0 && ix < S && iy < S ? depth[iy * S + ix] : -Infinity;
+        const ix = Math.round(mx + dx * step), iy = Math.round(my + dy * step);
+        const occ = ix >= 0 && iy >= 0 && ix < S && iy < S ? map[iy * S + ix] : -Infinity;
         if (!(occ > d + bias)) lit++;
       }
     }
     return lit / 49;
+  };
+  return (X, n = null, onHair = false) => {
+    const [mx, my, d] = toMap(n ? [X[0] + 0.25 * n[0], X[1] + 0.25 * n[1], X[2] + 0.25 * n[2]] : X);
+    const fromSkin = taps(depth, mx, my, d, 3);
+    if (!hairDepth) return fromSkin;
+    const fromHair = onHair ? taps(hairDepth, mx, my, d, 3) : taps(hairDepth, mx, my, d, 6);
+    return fromSkin * (onHair ? fromHair : 1 - 0.45 * (1 - fromHair));
   };
 }
 
@@ -513,7 +548,8 @@ export function drawHead(head, positions, cam, width, height, look, { aa = 2, sk
   const tex = skin || paintSkin(head, look, { seed });
   const N = vertexNormals(head, positions, ["skin", "mouth", "eyeSocketL", "eyeSocketR", "scleraL", "scleraR", "lashesL", "lashesR"]);
   const ao = occlusion(head, positions, N);
-  const shadow = shadowMap(head, positions, LIGHTS.key.dir);
+  const long = look.strands ? growHair(head, positions, look.strands, { count: look.strandCount ?? 24000, seed }) : null;
+  const shadow = shadowMap(head, positions, LIGHTS.key.dir, 1024, long);
 
   // Light at a point: how much arrives (d, to be multiplied by the surface's colour) and the highlights (s).
   const lightParts = (P, n, { wrap = 0.35, sheen = 0, gloss = 50, ao: occ = 1, sss = true, bump = null } = {}) => {
@@ -802,6 +838,65 @@ export function drawHead(head, positions, cam, width, height, look, { aa = 2, sk
     }
   }
 
+  // Longer hair: every strand is lit at its own points (darker toward the roots and in the inner layers, a band
+  // of shine across the strands) and drawn as a thin ribbon.
+  if (long) {
+    const per = long.segments + 1;
+    const hairCol = lin3(look.hair);
+    const half = 0.55 * aa;
+    const cols = new Float32Array(per * 3), scr = new Float32Array(per * 3);
+    for (let st = 0; st < long.count; st++) {
+      const base = st * per * 3;
+      const pt = (i) => [long.points[base + i * 3], long.points[base + i * 3 + 1], long.points[base + i * 3 + 2]];
+      const tone = (0.65 + 0.7 * long.tone[st]) * (0.6 + 0.4 * long.lift[st]);
+      for (let i = 0; i < per; i++) {
+        const P = pt(i);
+        const T = normalise(sub(pt(Math.min(per - 1, i + 1)), pt(Math.max(0, i - 1))));
+        const V = normalise(sub(eye, P));
+        const rootward = 0.5 + 0.5 * smooth(0, 0.25, i / (per - 1));
+        const albedo = hairCol.map((k) => k * tone * rootward);
+        const sh = shadow(P, null, true);
+        const out = [0, 0, 0];
+        for (const [name, L] of Object.entries(LIGHTS)) {
+          const tl = dot3(T, L.dir);
+          const diff = Math.sqrt(Math.max(0, 1 - tl * tl));
+          const p = L.power * (name === "key" ? 0.25 + 0.75 * sh : 1) * (name === "rim" ? 0.5 : 0.8);
+          for (let k = 0; k < 3; k++) out[k] += albedo[k] * L.colour[k] * diff * p;
+          if (name !== "rim") {
+            const Hh = normalise([L.dir[0] + V[0], L.dir[1] + V[1], L.dir[2] + V[2]]);
+            const th = dot3(T, Hh);
+            const sinTH = Math.sqrt(Math.max(0, 1 - th * th));
+            const lit = name === "key" ? sh : 0.6;
+            for (let k = 0; k < 3; k++) out[k] += lit * L.power * (0.05 * sinTH ** 90 + 0.45 * albedo[k] * sinTH ** 14);
+          }
+        }
+        for (let k = 0; k < 3; k++) out[k] += albedo[k] * 0.18;
+        cols.set(out, i * 3);
+        scr.set(project(c, P), i * 3);
+      }
+      for (let i = 0; i + 1 < per; i++) {
+        const A = [scr[i * 3], scr[i * 3 + 1], scr[i * 3 + 2]], B = [scr[i * 3 + 3], scr[i * 3 + 4], scr[i * 3 + 5]];
+        const dx = B[0] - A[0], dy = B[1] - A[1];
+        const l = Math.hypot(dx, dy);
+        if (l < 1e-6) continue;
+        const wa = half * (1 - 0.45 * (i / per)), wb = half * (1 - 0.45 * ((i + 1) / per)); // finer toward the tip
+        const px = -dy / l, py = dx / l;
+        const a1 = [A[0] + px * wa, A[1] + py * wa], a2 = [A[0] - px * wa, A[1] - py * wa];
+        const b1 = [B[0] + px * wb, B[1] + py * wb], b2 = [B[0] - px * wb, B[1] - py * wb];
+        const put = (x, y, t) => {
+          const z = A[2] + (B[2] - A[2]) * t;
+          const k = y * W + x;
+          if (z >= depth[k]) return;
+          depth[k] = z;
+          tag[k] = 0;
+          for (let j = 0; j < 3; j++) rgb[k * 3 + j] = cols[i * 3 + j] + (cols[i * 3 + 3 + j] - cols[i * 3 + j]) * t;
+        };
+        rasterTriangle(a1, a2, b1, W, H, (x, y, w0, w1, w2) => put(x, y, w2));
+        rasterTriangle(a2, b2, b1, W, H, (x, y, w0, w1, w2) => put(x, y, w1 + w2));
+      }
+    }
+  }
+
   // Light scatters under the skin: what arrives at skin pixels is blurred, red furthest, before it meets the
   // skin's own colour. Fine marks painted on the skin stay sharp.
   {
@@ -852,12 +947,12 @@ export function drawHead(head, positions, cam, width, height, look, { aa = 2, sk
 
 // Looks for made-up faces (sRGB 0-255). None is modelled on a real person.
 export const LOOKS = [
-  { skin: [226, 186, 160], blush: [214, 120, 110], underEye: [170, 120, 115], lips: [182, 104, 100], brows: [120, 72, 46], iris: [92, 120, 128], hair: [128, 66, 34], hairStyle: "short", freckles: 0.8, stubble: 0, shirt: [70, 92, 120], backdrop: [206, 210, 214], flush: 0.55 },
+  { skin: [226, 186, 160], blush: [214, 120, 110], underEye: [170, 120, 115], lips: [182, 104, 100], brows: [120, 72, 46], iris: [92, 120, 128], hair: [128, 66, 34], hairStyle: "buzz", strands: "wavy", freckles: 0.8, stubble: 0, shirt: [70, 92, 120], backdrop: [206, 210, 214], flush: 0.55 },
   { skin: [168, 116, 86], blush: [170, 84, 70], underEye: [110, 70, 60], lips: [128, 74, 70], brows: [40, 30, 24], iris: [70, 44, 28], hair: [26, 22, 20], hairStyle: "buzz", stubble: 0.75, shirt: [190, 186, 176], backdrop: [196, 200, 204], flush: 0.35 },
   { skin: [214, 176, 140], blush: [200, 120, 100], underEye: [150, 110, 95], lips: [176, 108, 100], brows: [62, 44, 32], iris: [100, 90, 52], hair: [52, 36, 26], hairStyle: "full", stubble: 0.35, shirt: [48, 48, 52], backdrop: [212, 210, 206], flush: 0.4 },
   { skin: [104, 68, 50], blush: [110, 52, 42], underEye: [70, 44, 36], lips: [92, 56, 52], brows: [24, 18, 16], iris: [48, 30, 22], hair: [18, 16, 14], hairStyle: "buzz", stubble: 0.4, shirt: [150, 40, 44], backdrop: [204, 206, 210], flush: 0.3 },
-  { skin: [232, 200, 170], blush: [220, 140, 124], underEye: [180, 140, 130], lips: [196, 120, 112], brows: [36, 28, 24], iris: [52, 36, 26], hair: [22, 20, 20], hairStyle: "short", stubble: 0, shirt: [210, 206, 196], backdrop: [214, 214, 212], flush: 0.35 },
-  { skin: [238, 206, 186], blush: [226, 140, 128], underEye: [190, 150, 145], lips: [196, 118, 112], brows: [168, 132, 90], iris: [90, 130, 160], hair: [196, 160, 104], hairStyle: "full", freckles: 0.3, stubble: 0, shirt: [96, 120, 80], backdrop: [208, 212, 214], flush: 0.5 },
+  { skin: [232, 200, 170], blush: [220, 140, 124], underEye: [180, 140, 130], lips: [196, 120, 112], brows: [36, 28, 24], iris: [52, 36, 26], hair: [22, 20, 20], hairStyle: "buzz", strands: "bob", stubble: 0, shirt: [210, 206, 196], backdrop: [214, 214, 212], flush: 0.35 },
+  { skin: [238, 206, 186], blush: [226, 140, 128], underEye: [190, 150, 145], lips: [196, 118, 112], brows: [168, 132, 90], iris: [90, 130, 160], hair: [196, 160, 104], hairStyle: "buzz", strands: "long", freckles: 0.3, stubble: 0, shirt: [96, 120, 80], backdrop: [208, 212, 214], flush: 0.5 },
 ];
 
 // A complete made-up photo: { image, pins, truth: { neutral, posed, weights }, camera }.
@@ -874,7 +969,7 @@ export function madeUpPhoto(head, { seed = 1, size = 900, look = LOOKS[0], smile
   // template's cut-off shoulders stay out of the picture.
   const f = (0.44 * size * distance) / 14;
   const camera = { R, f, cx: size / 2, cy: size / 2, T: [0, -1.2, distance], distance };
-  const image = draw ? drawHead(head, pose, camera, size, size, { ...look, hairStyle: hair ? look.hairStyle : null }, { aa, seed }) : null;
+  const image = draw ? drawHead(head, pose, camera, size, size, { ...look, hairStyle: hair ? look.hairStyle : null, strands: hair ? look.strands : null }, { aa, seed }) : null;
   return { image, pins: truePins(head, pose, camera), truth: { neutral, posed: pose, weights }, camera };
 }
 

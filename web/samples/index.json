@@ -2,7 +2,7 @@
  {
   "id": "made-up-1",
   "label": "Made-up face 1",
-  "about": "freckles, short hair",
+  "about": "freckles, long wavy hair",
   "width": 900,
   "height": 900
  },
@@ -30,14 +30,14 @@
  {
   "id": "made-up-5",
   "label": "Made-up face 5",
-  "about": "neutral",
+  "about": "bob",
   "width": 900,
   "height": 900
  },
  {
   "id": "made-up-6",
   "label": "Made-up face 6",
-  "about": "fair, fuller hair",
+  "about": "fair, long hair",
   "width": 900,
   "height": 900
  }

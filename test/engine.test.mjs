@@ -9,6 +9,7 @@ import { posed } from "../src/head.js";
 import { mul3, nearestRotation, rotation, solve } from "../src/linalg.js";
 import { PINS, pinsFromPoints, pointOf } from "../src/pins.js";
 import { startFront } from "../src/start.js";
+import { colliders, growHair } from "../src/strands.js";
 import { LOOKS, madeUpPhoto, truePins } from "../src/synth.js";
 import { similarityFit, thinPlate } from "../src/warp.js";
 import { nodeHead } from "../tools/node-head.mjs";
@@ -124,4 +125,26 @@ test("hair shell sits over the scalp and not the face", () => {
   const shell = hairShell(head, head.positions, "short");
   assert.ok(shell.index.length > 3000);
   assert.equal(hairShell(head, head.positions, "shaved"), null);
+});
+
+test("long hair grows from the scalp, stays outside the head and off the face", () => {
+  const hair = growHair(head, head.positions, "long", { count: 1500, seed: 2 });
+  assert.ok(hair.count > 1000, `${hair.count} strands`);
+  const per = hair.segments + 1;
+  const [skull, , , , face] = colliders(head, head.positions);
+  let inSkull = 0, onFace = 0, lowest = Infinity;
+  for (let st = 0; st < hair.count; st++) {
+    for (let i = 2; i < per; i++) {
+      const o = (st * per + i) * 3;
+      const p = [hair.points[o], hair.points[o + 1], hair.points[o + 2]];
+      const k = Math.hypot(...p.map((x, a) => (x - skull.c[a]) / skull.r[a]));
+      if (k < 0.99) inSkull++;
+      const f = Math.hypot(...p.map((x, a) => (x - face.c[a]) / face.r[a]));
+      if (f < 0.98) onFace++;
+      lowest = Math.min(lowest, p[1]);
+    }
+  }
+  assert.equal(inSkull, 0, "no strand passes through the head");
+  assert.equal(onFace, 0, "no strand hangs in front of the face");
+  assert.ok(lowest < -12, `long hair reaches the shoulders (lowest point ${lowest.toFixed(1)} cm)`);
 });
