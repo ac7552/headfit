@@ -1,0 +1,15 @@
+{
+  "name": "headfit",
+  "private": true,
+  "type": "module",
+  "description": "A 3D head from a photo, fitted by geometry from pins: the ICT face kit, no machine learning.",
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "serve": "python3 -m http.server 8790"
+  },
+  "devDependencies": {
+    "jpeg-js": "^0.4.4",
+    "pngjs": "^7.0.0",
+    "three": "0.170.0"
+  }
+}

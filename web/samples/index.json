@@ -1,0 +1,30 @@
+[
+ {
+  "id": "made-up-1",
+  "label": "Made-up face 1",
+  "about": "neutral",
+  "width": 900,
+  "height": 900
+ },
+ {
+  "id": "made-up-2",
+  "label": "Made-up face 2",
+  "about": "neutral, turned a little",
+  "width": 900,
+  "height": 900
+ },
+ {
+  "id": "made-up-3",
+  "label": "Made-up face 3",
+  "about": "smiling",
+  "width": 900,
+  "height": 900
+ },
+ {
+  "id": "made-up-4",
+  "label": "Made-up face 4",
+  "about": "taken at arm's length",
+  "width": 900,
+  "height": 900
+ }
+]

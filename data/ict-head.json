@@ -1,0 +1,912 @@
+{
+ "source": "ICT-FaceKit, ICT Face Model Light (MIT licence, Copyright (c) 2020 USC Institute for Creative Technologies)",
+ "units": "cm",
+ "vertexCount": 26719,
+ "skinVertexCount": 11248,
+ "parts": [
+  {
+   "name": "skin",
+   "about": "Face, head and neck",
+   "source": {
+    "offset": 320628,
+    "length": 11657
+   },
+   "uv": {
+    "offset": 367256,
+    "length": 23314
+   },
+   "triangles": {
+    "offset": 460512,
+    "length": 66864
+   }
+  },
+  {
+   "name": "mouth",
+   "about": "Mouth socket",
+   "source": {
+    "offset": 727968,
+    "length": 2120
+   },
+   "uv": {
+    "offset": 736448,
+    "length": 4240
+   },
+   "triangles": {
+    "offset": 753408,
+    "length": 12492
+   }
+  },
+  {
+   "name": "eyeSocketL",
+   "about": "Eye socket (person's left)",
+   "source": {
+    "offset": 803376,
+    "length": 426
+   },
+   "uv": {
+    "offset": 805080,
+    "length": 852
+   },
+   "triangles": {
+    "offset": 808488,
+    "length": 2424
+   }
+  },
+  {
+   "name": "eyeSocketR",
+   "about": "Eye socket (person's right)",
+   "source": {
+    "offset": 818184,
+    "length": 426
+   },
+   "uv": {
+    "offset": 819888,
+    "length": 852
+   },
+   "triangles": {
+    "offset": 823296,
+    "length": 2424
+   }
+  },
+  {
+   "name": "gums",
+   "about": "Gums and tongue",
+   "source": {
+    "offset": 832992,
+    "length": 3362
+   },
+   "uv": {
+    "offset": 846440,
+    "length": 6724
+   },
+   "triangles": {
+    "offset": 873336,
+    "length": 17424
+   }
+  },
+  {
+   "name": "teeth",
+   "about": "Teeth",
+   "source": {
+    "offset": 943032,
+    "length": 5352
+   },
+   "uv": {
+    "offset": 964440,
+    "length": 10704
+   },
+   "triangles": {
+    "offset": 1007256,
+    "length": 26088
+   }
+  },
+  {
+   "name": "scleraL",
+   "about": "Sclera, left",
+   "source": {
+    "offset": 1111608,
+    "length": 802
+   },
+   "uv": {
+    "offset": 1114816,
+    "length": 1604
+   },
+   "triangles": {
+    "offset": 1121232,
+    "length": 4608
+   }
+  },
+  {
+   "name": "irisL",
+   "about": "Iris, left",
+   "source": {
+    "offset": 1139664,
+    "length": 918
+   },
+   "uv": {
+    "offset": 1143336,
+    "length": 1836
+   },
+   "triangles": {
+    "offset": 1150680,
+    "length": 4788
+   }
+  },
+  {
+   "name": "scleraR",
+   "about": "Sclera, right",
+   "source": {
+    "offset": 1169832,
+    "length": 802
+   },
+   "uv": {
+    "offset": 1173040,
+    "length": 1604
+   },
+   "triangles": {
+    "offset": 1179456,
+    "length": 4608
+   }
+  },
+  {
+   "name": "irisR",
+   "about": "Iris, right",
+   "source": {
+    "offset": 1197888,
+    "length": 918
+   },
+   "uv": {
+    "offset": 1201560,
+    "length": 1836
+   },
+   "triangles": {
+    "offset": 1208904,
+    "length": 4788
+   }
+  },
+  {
+   "name": "lashesL",
+   "about": "Eyelashes, left",
+   "source": {
+    "offset": 1228056,
+    "length": 684
+   },
+   "uv": {
+    "offset": 1230792,
+    "length": 1368
+   },
+   "triangles": {
+    "offset": 1236264,
+    "length": 3240
+   }
+  },
+  {
+   "name": "lashesR",
+   "about": "Eyelashes, right",
+   "source": {
+    "offset": 1249224,
+    "length": 684
+   },
+   "uv": {
+    "offset": 1251960,
+    "length": 1368
+   },
+   "triangles": {
+    "offset": 1257432,
+    "length": 3240
+   }
+  }
+ ],
+ "expressions": [
+  {
+   "name": "browDown_L",
+   "scale": 1.395062105166783e-05,
+   "index": {
+    "offset": 1270392,
+    "length": 3389
+   },
+   "delta": {
+    "offset": 1277172,
+    "length": 10167
+   }
+  },
+  {
+   "name": "browDown_R",
+   "scale": 1.395062105166783e-05,
+   "index": {
+    "offset": 1297508,
+    "length": 3405
+   },
+   "delta": {
+    "offset": 1304320,
+    "length": 10215
+   }
+  },
+  {
+   "name": "browInnerUp_L",
+   "scale": 1.84936063722648e-05,
+   "index": {
+    "offset": 1324752,
+    "length": 6722
+   },
+   "delta": {
+    "offset": 1338196,
+    "length": 20166
+   }
+  },
+  {
+   "name": "browInnerUp_R",
+   "scale": 1.84936063722648e-05,
+   "index": {
+    "offset": 1378528,
+    "length": 6724
+   },
+   "delta": {
+    "offset": 1391976,
+    "length": 20172
+   }
+  },
+  {
+   "name": "browOuterUp_L",
+   "scale": 2.430616168706319e-05,
+   "index": {
+    "offset": 1432320,
+    "length": 6967
+   },
+   "delta": {
+    "offset": 1446256,
+    "length": 20901
+   }
+  },
+  {
+   "name": "browOuterUp_R",
+   "scale": 2.430616168706319e-05,
+   "index": {
+    "offset": 1488060,
+    "length": 6973
+   },
+   "delta": {
+    "offset": 1502008,
+    "length": 20919
+   }
+  },
+  {
+   "name": "cheekPuff_L",
+   "scale": 4.23352763451033e-05,
+   "index": {
+    "offset": 1543848,
+    "length": 7227
+   },
+   "delta": {
+    "offset": 1558304,
+    "length": 21681
+   }
+  },
+  {
+   "name": "cheekPuff_R",
+   "scale": 4.23352763451033e-05,
+   "index": {
+    "offset": 1601668,
+    "length": 7229
+   },
+   "delta": {
+    "offset": 1616128,
+    "length": 21687
+   }
+  },
+  {
+   "name": "cheekSquint_L",
+   "scale": 1.7769646290475173e-05,
+   "index": {
+    "offset": 1659504,
+    "length": 9406
+   },
+   "delta": {
+    "offset": 1678316,
+    "length": 28218
+   }
+  },
+  {
+   "name": "cheekSquint_R",
+   "scale": 1.7769646290475173e-05,
+   "index": {
+    "offset": 1734752,
+    "length": 9415
+   },
+   "delta": {
+    "offset": 1753584,
+    "length": 28245
+   }
+  },
+  {
+   "name": "eyeBlink_L",
+   "scale": 5.331492049928282e-05,
+   "index": {
+    "offset": 1810076,
+    "length": 4161
+   },
+   "delta": {
+    "offset": 1818400,
+    "length": 12483
+   }
+  },
+  {
+   "name": "eyeBlink_R",
+   "scale": 5.331522568437758e-05,
+   "index": {
+    "offset": 1843368,
+    "length": 4163
+   },
+   "delta": {
+    "offset": 1851696,
+    "length": 12489
+   }
+  },
+  {
+   "name": "eyeLookDown_L",
+   "scale": 2.3592028565324867e-05,
+   "index": {
+    "offset": 1876676,
+    "length": 2737
+   },
+   "delta": {
+    "offset": 1882152,
+    "length": 8211
+   }
+  },
+  {
+   "name": "eyeLookDown_R",
+   "scale": 2.3592028565324867e-05,
+   "index": {
+    "offset": 1898576,
+    "length": 2703
+   },
+   "delta": {
+    "offset": 1903984,
+    "length": 8109
+   }
+  },
+  {
+   "name": "eyeLookIn_L",
+   "scale": 7.05435346537675e-06,
+   "index": {
+    "offset": 1920204,
+    "length": 2381
+   },
+   "delta": {
+    "offset": 1924968,
+    "length": 7143
+   }
+  },
+  {
+   "name": "eyeLookIn_R",
+   "scale": 7.05435346537675e-06,
+   "index": {
+    "offset": 1939256,
+    "length": 2376
+   },
+   "delta": {
+    "offset": 1944008,
+    "length": 7128
+   }
+  },
+  {
+   "name": "eyeLookOut_L",
+   "scale": 7.1651356547746135e-06,
+   "index": {
+    "offset": 1958264,
+    "length": 2367
+   },
+   "delta": {
+    "offset": 1963000,
+    "length": 7101
+   }
+  },
+  {
+   "name": "eyeLookOut_R",
+   "scale": 7.1651356547746135e-06,
+   "index": {
+    "offset": 1977204,
+    "length": 2362
+   },
+   "delta": {
+    "offset": 1981928,
+    "length": 7086
+   }
+  },
+  {
+   "name": "eyeLookUp_L",
+   "scale": 1.0744041261024803e-05,
+   "index": {
+    "offset": 1996100,
+    "length": 2422
+   },
+   "delta": {
+    "offset": 2000944,
+    "length": 7266
+   }
+  },
+  {
+   "name": "eyeLookUp_R",
+   "scale": 1.0743736075930056e-05,
+   "index": {
+    "offset": 2015476,
+    "length": 2421
+   },
+   "delta": {
+    "offset": 2020320,
+    "length": 7263
+   }
+  },
+  {
+   "name": "eyeSquint_L",
+   "scale": 8.226569414349797e-06,
+   "index": {
+    "offset": 2034848,
+    "length": 3983
+   },
+   "delta": {
+    "offset": 2042816,
+    "length": 11949
+   }
+  },
+  {
+   "name": "eyeSquint_R",
+   "scale": 8.226569414349797e-06,
+   "index": {
+    "offset": 2066716,
+    "length": 3975
+   },
+   "delta": {
+    "offset": 2074668,
+    "length": 11925
+   }
+  },
+  {
+   "name": "eyeWide_L",
+   "scale": 1.0264900662251653e-05,
+   "index": {
+    "offset": 2098520,
+    "length": 2135
+   },
+   "delta": {
+    "offset": 2102792,
+    "length": 6405
+   }
+  },
+  {
+   "name": "eyeWide_R",
+   "scale": 1.0264595477156905e-05,
+   "index": {
+    "offset": 2115604,
+    "length": 2138
+   },
+   "delta": {
+    "offset": 2119880,
+    "length": 6414
+   }
+  },
+  {
+   "name": "jawForward",
+   "scale": 3.368633075960569e-05,
+   "index": {
+    "offset": 2132708,
+    "length": 13470
+   },
+   "delta": {
+    "offset": 2159648,
+    "length": 40410
+   }
+  },
+  {
+   "name": "jawLeft",
+   "scale": 2.7211676381725518e-05,
+   "index": {
+    "offset": 2240468,
+    "length": 13515
+   },
+   "delta": {
+    "offset": 2267500,
+    "length": 40545
+   }
+  },
+  {
+   "name": "jawOpen",
+   "scale": 0.00010791314432203132,
+   "index": {
+    "offset": 2348592,
+    "length": 15741
+   },
+   "delta": {
+    "offset": 2380076,
+    "length": 47223
+   }
+  },
+  {
+   "name": "jawRight",
+   "scale": 2.7211676381725518e-05,
+   "index": {
+    "offset": 2474524,
+    "length": 13516
+   },
+   "delta": {
+    "offset": 2501556,
+    "length": 40548
+   }
+  },
+  {
+   "name": "mouthClose",
+   "scale": 0.00011652006591998047,
+   "index": {
+    "offset": 2582652,
+    "length": 3834
+   },
+   "delta": {
+    "offset": 2590320,
+    "length": 11502
+   }
+  },
+  {
+   "name": "mouthDimple_L",
+   "scale": 2.1149327066866097e-05,
+   "index": {
+    "offset": 2613324,
+    "length": 4938
+   },
+   "delta": {
+    "offset": 2623200,
+    "length": 14814
+   }
+  },
+  {
+   "name": "mouthDimple_R",
+   "scale": 2.1149327066866097e-05,
+   "index": {
+    "offset": 2652828,
+    "length": 4940
+   },
+   "delta": {
+    "offset": 2662708,
+    "length": 14820
+   }
+  },
+  {
+   "name": "mouthFrown_L",
+   "scale": 1.572161015655996e-05,
+   "index": {
+    "offset": 2692348,
+    "length": 5348
+   },
+   "delta": {
+    "offset": 2703044,
+    "length": 16044
+   }
+  },
+  {
+   "name": "mouthFrown_R",
+   "scale": 1.572161015655996e-05,
+   "index": {
+    "offset": 2735132,
+    "length": 5368
+   },
+   "delta": {
+    "offset": 2745868,
+    "length": 16104
+   }
+  },
+  {
+   "name": "mouthFunnel",
+   "scale": 3.0103457747123676e-05,
+   "index": {
+    "offset": 2778076,
+    "length": 9482
+   },
+   "delta": {
+    "offset": 2797040,
+    "length": 28446
+   }
+  },
+  {
+   "name": "mouthLeft",
+   "scale": 5.446821497238075e-05,
+   "index": {
+    "offset": 2853932,
+    "length": 8155
+   },
+   "delta": {
+    "offset": 2870244,
+    "length": 24465
+   }
+  },
+  {
+   "name": "mouthLowerDown_L",
+   "scale": 1.3302713095492407e-05,
+   "index": {
+    "offset": 2919176,
+    "length": 3419
+   },
+   "delta": {
+    "offset": 2926016,
+    "length": 10257
+   }
+  },
+  {
+   "name": "mouthLowerDown_R",
+   "scale": 1.3302713095492407e-05,
+   "index": {
+    "offset": 2946532,
+    "length": 3434
+   },
+   "delta": {
+    "offset": 2953400,
+    "length": 10302
+   }
+  },
+  {
+   "name": "mouthPress_L",
+   "scale": 1.2556840723899054e-05,
+   "index": {
+    "offset": 2974004,
+    "length": 6239
+   },
+   "delta": {
+    "offset": 2986484,
+    "length": 18717
+   }
+  },
+  {
+   "name": "mouthPress_R",
+   "scale": 1.2556840723899054e-05,
+   "index": {
+    "offset": 3023920,
+    "length": 6251
+   },
+   "delta": {
+    "offset": 3036424,
+    "length": 18753
+   }
+  },
+  {
+   "name": "mouthPucker",
+   "scale": 3.389080477309488e-05,
+   "index": {
+    "offset": 3073932,
+    "length": 10147
+   },
+   "delta": {
+    "offset": 3094228,
+    "length": 30441
+   }
+  },
+  {
+   "name": "mouthRight",
+   "scale": 5.446821497238075e-05,
+   "index": {
+    "offset": 3155112,
+    "length": 8070
+   },
+   "delta": {
+    "offset": 3171252,
+    "length": 24210
+   }
+  },
+  {
+   "name": "mouthRollLower",
+   "scale": 4.333414716025266e-05,
+   "index": {
+    "offset": 3219672,
+    "length": 5422
+   },
+   "delta": {
+    "offset": 3230516,
+    "length": 16266
+   }
+  },
+  {
+   "name": "mouthRollUpper",
+   "scale": 3.535264137699516e-05,
+   "index": {
+    "offset": 3263048,
+    "length": 6905
+   },
+   "delta": {
+    "offset": 3276860,
+    "length": 20715
+   }
+  },
+  {
+   "name": "mouthShrugLower",
+   "scale": 3.39060640278329e-05,
+   "index": {
+    "offset": 3318292,
+    "length": 5672
+   },
+   "delta": {
+    "offset": 3329636,
+    "length": 17016
+   }
+  },
+  {
+   "name": "mouthShrugUpper",
+   "scale": 1.868037965025789e-05,
+   "index": {
+    "offset": 3363668,
+    "length": 4621
+   },
+   "delta": {
+    "offset": 3372912,
+    "length": 13863
+   }
+  },
+  {
+   "name": "mouthSmile_L",
+   "scale": 3.204809717093418e-05,
+   "index": {
+    "offset": 3400640,
+    "length": 8333
+   },
+   "delta": {
+    "offset": 3417308,
+    "length": 24999
+   }
+  },
+  {
+   "name": "mouthSmile_R",
+   "scale": 3.204809717093418e-05,
+   "index": {
+    "offset": 3467308,
+    "length": 8343
+   },
+   "delta": {
+    "offset": 3483996,
+    "length": 25029
+   }
+  },
+  {
+   "name": "mouthStretch_L",
+   "scale": 2.3290200506607258e-05,
+   "index": {
+    "offset": 3534056,
+    "length": 6969
+   },
+   "delta": {
+    "offset": 3547996,
+    "length": 20907
+   }
+  },
+  {
+   "name": "mouthStretch_R",
+   "scale": 2.3290200506607258e-05,
+   "index": {
+    "offset": 3589812,
+    "length": 7017
+   },
+   "delta": {
+    "offset": 3603848,
+    "length": 21051
+   }
+  },
+  {
+   "name": "mouthUpperUp_L",
+   "scale": 2.5309915463728747e-05,
+   "index": {
+    "offset": 3645952,
+    "length": 7842
+   },
+   "delta": {
+    "offset": 3661636,
+    "length": 23526
+   }
+  },
+  {
+   "name": "mouthUpperUp_R",
+   "scale": 2.5309915463728747e-05,
+   "index": {
+    "offset": 3708688,
+    "length": 7868
+   },
+   "delta": {
+    "offset": 3724424,
+    "length": 23604
+   }
+  },
+  {
+   "name": "noseSneer_L",
+   "scale": 3.1104464857936336e-05,
+   "index": {
+    "offset": 3771632,
+    "length": 8891
+   },
+   "delta": {
+    "offset": 3789416,
+    "length": 26673
+   }
+  },
+  {
+   "name": "noseSneer_R",
+   "scale": 3.1104464857936336e-05,
+   "index": {
+    "offset": 3842764,
+    "length": 8920
+   },
+   "delta": {
+    "offset": 3860604,
+    "length": 26760
+   }
+  }
+ ],
+ "landmarks68": [
+  1225,
+  1888,
+  1052,
+  367,
+  1719,
+  1722,
+  2199,
+  1447,
+  966,
+  3661,
+  4390,
+  3927,
+  3924,
+  2608,
+  3272,
+  4088,
+  3443,
+  268,
+  493,
+  1914,
+  2044,
+  1401,
+  3615,
+  4240,
+  4114,
+  2734,
+  2509,
+  978,
+  4527,
+  4942,
+  4857,
+  1140,
+  2075,
+  1147,
+  4269,
+  3360,
+  1507,
+  1542,
+  1537,
+  1528,
+  1518,
+  1511,
+  3742,
+  3751,
+  3756,
+  3721,
+  3725,
+  3732,
+  5708,
+  5695,
+  2081,
+  0,
+  4275,
+  6200,
+  6213,
+  6346,
+  6461,
+  5518,
+  5957,
+  5841,
+  5702,
+  5711,
+  5533,
+  6216,
+  6207,
+  6470,
+  5517,
+  5966
+ ],
+ "positions": {
+  "offset": 0,
+  "length": 80157
+ }
+}

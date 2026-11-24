@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Headfit: a 3D head from a photo, by pins</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:,">
+  <script type="importmap">
+    { "imports": { "three": "./vendor/three.module.min.js" } }
+  </script>
+</head>
+<body>
+  <header class="top">
+    <h1>Headfit</h1>
+    <p>Pin a photo, get your head in 3D. Everything happens in this tab, nothing is uploaded, and no AI is involved: the head is bent to your pins by geometry.</p>
+  </header>
+
+  <main class="panes">
+    <section class="pane photo-pane" aria-label="Photo and pins">
+      <div class="bar">
+        <div class="tabs" role="tablist">
+          <button role="tab" class="tab is-on" data-view="front" aria-selected="true">Front photo</button>
+          <button role="tab" class="tab" data-view="side" aria-selected="false">Side photo <span class="soft">(optional)</span></button>
+        </div>
+        <div class="actions">
+          <label class="button">Choose photo<input type="file" accept="image/*" id="photo-input" hidden></label>
+          <select id="sample" aria-label="Try a sample face">
+            <option value="">Try a sample face…</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="stage" id="stage">
+        <svg id="photo" role="img" aria-label="Photo with pins"></svg>
+        <div class="empty" id="empty">
+          <p><strong>Choose a photo</strong> of a face looking straight at the camera, or try a sample.</p>
+          <p class="soft">Level with the face, mouth closed, hair off the forehead works best.</p>
+        </div>
+      </div>
+
+      <div class="bar under">
+        <p class="status" id="status" aria-live="polite"></p>
+        <div class="options">
+          <label class="check" id="side-facing-row" hidden>Nose points
+            <select id="side-facing">
+              <option value="left">to the left</option>
+              <option value="right">to the right</option>
+            </select>
+          </label>
+          <label class="check">Taken
+            <select id="distance">
+              <option value="120">by someone else</option>
+              <option value="45">at arm's length</option>
+            </select>
+          </label>
+          <label class="check"><input type="checkbox" id="ears"> Ears hidden</label>
+          <button class="link" id="replace">Place pins again</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="pane head-pane" aria-label="The 3D head">
+      <div class="viewer" id="viewer"></div>
+      <div class="bar under">
+        <div class="options">
+          <div class="seg" role="radiogroup" aria-label="Expression">
+            <button class="is-on" data-expression="neutral" role="radio" aria-checked="true">Neutral</button>
+            <button data-expression="photo" role="radio" aria-checked="false">As in the photo</button>
+          </div>
+          <label class="check">Hair
+            <select id="hair">
+              <option value="shaved">Shaved</option>
+              <option value="buzz">Buzz cut</option>
+              <option value="short" selected>Short</option>
+              <option value="full">Full on top</option>
+            </select>
+          </label>
+          <label class="check">Colour <input type="color" id="hair-colour" value="#3a2a20"></label>
+        </div>
+        <button class="button" id="download" disabled>Download .glb</button>
+      </div>
+      <p class="readout" id="readout"></p>
+    </section>
+  </main>
+
+  <footer class="credits">
+    Head mesh and expressions: ICT Face Model Light, © 2020 USC Institute for Creative Technologies, MIT licence.
+    Sample faces are made up: the same head bent and painted by this project, not photos of anyone.
+    Viewer: three.js, MIT licence. Font: Inter Tight, SIL Open Font Licence.
+  </footer>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
