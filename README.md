@@ -14,8 +14,9 @@ python3 -m http.server 8790
 
 Open <http://localhost:8790/web/>. Try a sample face, or choose a photo: click the middle of each eye and the mouth,
 then drag the 41 pins onto their spots. The six samples are made up, not photos of anyone: `src/synth.js` bends
-the head by a known amount, paints its skin (pores, blush, freckles, stubble, brows, lips), and lights and draws it
-like a studio portrait, with soft shadows, skin sheen, glossy eyes and short hair. Red pins are
+the head by a known amount, paints its skin (uneven tone, blush, freckles, stubble, brows, lips), and lights and
+draws it like a studio portrait: a soft key light with shadows, light scattering under the skin, sheen, wet eyes
+under relaxed lids, and short hair drawn strand by strand in layers. Red pins are
 spots; blue pins slide along an outline (the jaw line, the rim of an ear), so only how far out they sit matters. A
 side photo is optional. **Download .glb** saves the head (metres, textures included).
 
@@ -80,8 +81,8 @@ fitted head meets the pins to within about 2 pixels.
   wasn't reachable from here) or MetaHuman hair exported from Unreal.
 - Side photos: the code path exists but has no samples or measured results yet.
 - Reading a smile fully (0.5 reads as 0.31).
-- More lifelike made-up faces: they still read as computer-drawn (longer hair, skin detail from openly licensed
-  texture photos).
+- Made-up faces that pass for photos: they still read as computer-drawn. Longer hair, more varied face shapes
+  and skin detail from openly licensed texture photos would help.
 - Posing the camera and bending the face together (the pose that needs the least bending), to help one-photo depth.
 - Saving heads in the browser between visits.
 

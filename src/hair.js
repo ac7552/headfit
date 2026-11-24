@@ -23,11 +23,10 @@ export function scalp(head) {
   const { earRight, earLeft } = regions(head);
   const ears = [...earRight, ...earLeft].map((v) => [P[v * 3], P[v * 3 + 1], P[v * 3 + 2]]);
   const h = new Float32Array(head.vertexCount);
+  const clear = new Float32Array(head.vertexCount).fill(1);
   for (let v = 0; v < head.skinVertexCount; v++) {
-    const x = P[v * 3], y = P[v * 3 + 1], z = P[v * 3 + 2] - 1.0; // around the skull's vertical axis
-    const a = (Math.atan2(Math.abs(x), z) * 180) / Math.PI; // 0 at the forehead, 90 at the ears, 180 at the back
-    const line = hairline(a);
-    let w = smooth(line, line + 1.2, y);
+    const x = P[v * 3], y = P[v * 3 + 1];
+    let w = hairlineWeight(x, y, P[v * 3 + 2]);
     // Keep clear of the ears.
     let near = Infinity;
     if (w > 0 && Math.abs(x) > 5) {
@@ -35,12 +34,28 @@ export function scalp(head) {
         const d = Math.hypot(x - e[0], y - e[1], P[v * 3 + 2] - e[2]);
         if (d < near) near = d;
       }
-      w *= smooth(0.6, 1.6, near);
+      clear[v] = smooth(0.6, 1.6, near);
+      w *= clear[v];
     }
     h[v] = w;
   }
   head._scalp = h;
+  head._earClear = clear;
   return h;
+}
+
+// How far inside the hairline a spot of the template is (0 outside, 1 well inside), ears not considered.
+export function hairlineWeight(x, y, z) {
+  // Around the skull's vertical axis: 0 degrees at the forehead, 90 at the ears, 180 at the back.
+  const a = (Math.atan2(Math.abs(x), z - 1.0) * 180) / Math.PI;
+  const line = hairline(a);
+  return smooth(line, line + 1.2, y);
+}
+
+// Per skin vertex, 1 away from the ears and falling to 0 on them: hair keeps clear of the ears.
+export function earClearance(head) {
+  scalp(head);
+  return head._earClear;
 }
 
 function hairline(a) {
@@ -58,7 +73,7 @@ function smooth(a, b, x) {
   return t * t * (3 - 2 * t);
 }
 
-// The shell: { position, uv, alpha, index } over the scalp's triangles, for the given fitted positions.
+// The shell: { position, base, uv, alpha, index } over the scalp's triangles, for the given fitted positions.
 export function hairShell(head, positions, style) {
   const s = STYLES[style] || STYLES.short;
   if (!s.length) return null;
@@ -71,7 +86,7 @@ export function hairShell(head, positions, style) {
     if (a > 0.01 || b > 0.01 || c > 0.01) keep.push(t);
   }
   const map = new Map();
-  const pos = [], uvs = [], alpha = [], index = [];
+  const pos = [], base = [], uvs = [], alpha = [], index = [], vertex = [];
   const top = s.top || 0;
   for (const t of keep) {
     for (let k = 0; k < 3; k++) {
@@ -83,13 +98,17 @@ export function hairShell(head, positions, style) {
         const lift = 0.04 + s.length * Math.pow(w, 0.6) * (1 + top * smooth(8, 14, y));
         map.set(r, pos.length / 3);
         pos.push(positions[v * 3] + N[v * 3] * lift, positions[v * 3 + 1] + N[v * 3 + 1] * lift, positions[v * 3 + 2] + N[v * 3 + 2] * lift);
+        base.push(positions[v * 3], positions[v * 3 + 1], positions[v * 3 + 2]);
+        vertex.push(v);
         uvs.push(uv[r * 2], uv[r * 2 + 1]);
         alpha.push(smooth(0.05, 0.6, w));
       }
       index.push(map.get(r));
     }
   }
-  return { position: new Float32Array(pos), uv: new Float32Array(uvs), alpha: new Float32Array(alpha), index: new Uint32Array(index) };
+  // `base` is each shell vertex's own spot on the scalp (the root of the hair that ends at `position`), and
+  // `vertex` the skin vertex it came from.
+  return { position: new Float32Array(pos), base: new Float32Array(base), vertex: new Uint32Array(vertex), uv: new Float32Array(uvs), alpha: new Float32Array(alpha), index: new Uint32Array(index) };
 }
 
 // Hair colour: the median of the darker half of the photo where the hairline's inside meets the camera.

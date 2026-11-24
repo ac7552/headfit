@@ -1,12 +1,14 @@
 // Made-up faces: the template bent by a known amount, painted with a procedural skin (pores, blush, freckles,
-// stubble, brows, lips), lit like a studio portrait (a key light with soft shadows, fill, rim, skin sheen), with
-// detailed eyes and strand-textured short hair, and drawn to an image with a little camera grain.
+// stubble, brows, lips), lit like a studio portrait (a soft key light with shadows, fill, rim, light scattering
+// under the skin, sheen), with wet eyes under relaxed lids and hair drawn strand by strand in layers, and drawn
+// to an image with a little camera grain.
 // Nobody is pictured: every face comes from a seed. Because the true shape and the true pins are known, these
 // measure the fit in millimetres, and they stand in for photos in the samples and tests.
 
 import { project } from "./camera.js";
 import { posed, vertexNormals } from "./head.js";
-import { hairShell } from "./hair.js";
+import { boxBlur } from "./bake.js";
+import { earClearance, hairlineWeight, hairShell } from "./hair.js";
 import { CURVES, PINS, pointOf, regionFor } from "./pins.js";
 import { rasterTriangle } from "./raster.js";
 
@@ -155,6 +157,7 @@ export function paintSkin(head, look, { size = 1024, seed = 1 } = {}) {
       return [q[0], q[1] + 0.12, q[2]];
     })),
     eyes: [[36, 39], [42, 45]].map(([a, b]) => mix(pt(a), pt(b), 0.5)),
+    lids: [[36, 37, 38, 39], [42, 43, 44, 45]].map((ks) => ks.map(pt)),
     noseTip: pt(30),
     noseBottomY: pt(33)[1],
     chinY: pt(8)[1],
@@ -163,6 +166,7 @@ export function paintSkin(head, look, { size = 1024, seed = 1 } = {}) {
       return [(r() * 2 - 1) * 5, (r() * 2 - 1) * 6, 0, 0.05 + 0.05 * r()];
     }),
   };
+  const haired = look.hairStyle && look.hairStyle !== "shaved" ? earClearance(head) : null;
   const { source, uv, triangles } = head.part("skin");
   for (let t = 0; t < triangles.length; t += 3) {
     const r = [triangles[t], triangles[t + 1], triangles[t + 2]];
@@ -171,9 +175,11 @@ export function paintSkin(head, look, { size = 1024, seed = 1 } = {}) {
       const v = source[k];
       return [P[v * 3], P[v * 3 + 1], P[v * 3 + 2]];
     });
+    const hs = haired ? r.map((k) => haired[source[k]]) : [0, 0, 0];
     rasterTriangle(T[0], T[1], T[2], W, H, (x, y, b0, b1, b2) => {
       const q = [0, 1, 2].map((k) => b0 * X[0][k] + b1 * X[1][k] + b2 * X[2][k]);
-      const [c, sheen] = skinAt(q, look, ctx);
+      const hairy = haired ? hairlineWeight(q[0], q[1], q[2]) * (b0 * hs[0] + b1 * hs[1] + b2 * hs[2]) : 0;
+      const [c, sheen] = skinAt(q, look, ctx, hairy);
       const i = y * W + x;
       tex[i * 4] = c[0];
       tex[i * 4 + 1] = c[1];
@@ -231,7 +237,7 @@ function alongLine(x, y, line) {
   return best;
 }
 
-function skinAt(q, look, ctx) {
+function skinAt(q, look, ctx, hairy = 0) {
   const [x, y, z] = q;
   const s = ctx.seed;
   const ax = Math.abs(x);
@@ -240,7 +246,10 @@ function skinAt(q, look, ctx) {
 
   // Broad unevenness and fine pores (pores show most on the nose and cheeks).
   const mottle = fbm(x * 0.45, y * 0.45, z * 0.45, s, 4) - 0.5;
-  c = c.map((k) => k * (1 + 0.1 * mottle));
+  c = c.map((k) => k * (1 + 0.16 * mottle));
+  // Blotches: patches a little redder or paler than their surroundings.
+  const blotch = fbm(x * 1.7, y * 1.7, z * 1.7, s + 8, 3) - 0.5;
+  c = [c[0] * (1 + 0.05 * blotch), c[1] * (1 - 0.07 * blotch), c[2] * (1 - 0.08 * blotch)];
   const poreZone = 0.5 + 0.5 * smooth(2.5, 0, Math.hypot(ax - 2.4, y - 0.3) - 1.5) * front;
   const pore = noise3(x * 38, y * 38, z * 38, s + 1);
   c = c.map((k) => k * (1 - 0.055 * poreZone * smooth(0.55, 0.85, pore)));
@@ -261,6 +270,13 @@ function skinAt(q, look, ctx) {
   }
   const forehead = smooth(6, 9, y) * front;
   c = c.map((k) => k * (1 + 0.03 * forehead));
+  // The lash line: dark along the edge of the upper lid, where the lashes root.
+  if (z > 7) {
+    for (const lid of ctx.lids) {
+      const dl = alongLine(x, y, lid).d;
+      if (dl < 0.07) c = mix(c, look.brows.map((k) => k * 0.35), 0.7 * smooth(0.07, 0.025, dl));
+    }
+  }
 
   // Freckles: scattered dots, thickest over the nose and cheeks.
   if (look.freckles) {
@@ -313,26 +329,34 @@ function skinAt(q, look, ctx) {
     c = mix(c, lc, lipW);
   }
 
-  // Brows: a band thicker at the inner end, made of short strands slanting outward and up.
+  // Brows: hairs that stand up at the inner end and lie along the brow further out, over skin they shade.
   if (z > 7) {
     for (const line of ctx.brows) {
       const b = alongLine(x, y, line);
       if (b.d > 0.7) continue;
       const t = b.s / b.length;
-      const w = 0.4 * (1 - t) + 0.17 * t;
-      const body = smooth(w, w * 0.45, b.d) * smooth(-0.05, 0.06, t) * smooth(1.08, 0.95, t);
+      const w = 0.46 * (1 - t) + 0.2 * t;
+      const body = smooth(w, w * 0.3, b.d) * smooth(-0.04, 0.1, t) * smooth(1.06, 0.9, t);
       if (body <= 0) continue;
-      const ang = 0.35;
-      const across = b.d * b.side * Math.cos(ang) - b.s * Math.sin(ang);
-      const along = b.s * Math.cos(ang) + b.d * b.side * Math.sin(ang);
-      const strands = noise3(along * 4, across * 60, 0, s + 5) * 0.7 + noise3(along * 9, across * 120, 0, s + 6) * 0.3;
-      const dens = Math.min(1, body * (0.35 + 1.1 * smooth(0.35, 0.75, strands)));
-      c = mix(c, look.brows, 0.92 * dens);
+      const out = line[line.length - 1][0] > line[0][0] ? 1 : -1; // which way is outward for this brow
+      const ang = 1.2 - 1.35 * smooth(0, 0.6, t); // the hairs' angle up from "outward"
+      const along = out * x * Math.cos(ang) + y * Math.sin(ang);
+      const across = -out * x * Math.sin(ang) + y * Math.cos(ang);
+      const hairs = smooth(0.3, 0.55, noise3(along * 4, across * 60, out, s + 5));
+      const dens = Math.min(1, body * hairs * 1.1 + 0.45 * body * body);
+      c = mix(c, look.brows.map((k) => k * 0.8), 0.95 * dens);
     }
   }
 
+  // Under the hair the scalp is shaded by it, with darker dots where hairs root.
+  if (hairy > 0) {
+    const g = 0.055;
+    const rootDot = hash3(Math.floor(x / g), Math.floor(y / g), Math.floor(z / g), s + 60);
+    c = mix(c, look.hair.map((k) => k * 0.5), Math.min(0.9, smooth(0, 0.6, hairy) * (0.55 + 0.4 * rootDot)));
+  }
+
   // A shirt over the shoulders, with a ribbed crew neck.
-  const neckline = z > 0 ? -13.7 + 0.02 * x * x : -12.4;
+  const neckline = -12.4 + smooth(-2.5, 2.5, z) * (-1.3 + 0.02 * x * x);
   if (look.shirt) {
     const shirt = smooth(neckline + 0.08, neckline - 0.08, y);
     if (shirt > 0) {
@@ -345,7 +369,9 @@ function skinAt(q, look, ctx) {
   // Sheen: oilier on the forehead, nose and chin; none on the shirt.
   const tzone = Math.max(Math.exp(-(x * x) / 8 - ((y - 7) ** 2) / 6), noseRed, chinRed) * front;
   const onSkin = look.shirt ? smooth(neckline - 0.1, neckline + 0.1, y) : 1;
-  return [lin3(c), (0.35 + 0.65 * tzone) * onSkin];
+  // Lips are wetter than skin; the scalp under hair has no shine.
+  const sheen = (0.35 + 0.65 * tzone) * onSkin * (1 - 0.8 * Math.min(1, hairy));
+  return [lin3(c), sheen + (2.4 - sheen) * lipW];
 }
 
 // The iris and the white of the eye, from the eyeball's UVs (front of the eye at 0.5, 0.5; 0.108 per 5.9 mm).
@@ -374,8 +400,8 @@ function eyeAt(u, v, look, s) {
 // ---------------------------------------------------------------- lighting and drawing
 
 const LIGHTS = {
-  key: { dir: normalise([-0.5, 0.42, 0.75]), colour: [1.0, 0.95, 0.88], power: 1.25 },
-  fill: { dir: normalise([0.8, 0.05, 0.6]), colour: [0.85, 0.9, 1.0], power: 0.38 },
+  key: { dir: normalise([-0.38, 0.45, 0.8]), colour: [1.0, 0.95, 0.88], power: 1.3 },
+  fill: { dir: normalise([0.8, 0.05, 0.6]), colour: [0.85, 0.9, 1.0], power: 0.45 },
   rim: { dir: normalise([0.45, 0.55, -0.7]), colour: [1, 1, 1], power: 0.8 },
 };
 
@@ -444,18 +470,20 @@ function shadowMap(head, positions, dir, size = 1024) {
       if (d > depth[i]) depth[i] = d;
     });
   }
-  const bias = 0.12 + 2 / scale;
-  return (X) => {
-    const [mx, my, d] = toMap(X);
+  // A wide light (a softbox): 49 taps over about 0.4 cm either way. The point is lifted off the surface along its
+  // normal first, so the surface doesn't shadow itself.
+  const bias = 0.2;
+  return (X, n = null) => {
+    const [mx, my, d] = toMap(n ? [X[0] + 0.25 * n[0], X[1] + 0.25 * n[1], X[2] + 0.25 * n[2]] : X);
     let lit = 0;
-    for (let dy = -2; dy <= 2; dy++) {
-      for (let dx = -2; dx <= 2; dx++) {
-        const ix = Math.round(mx + dx * 1.2), iy = Math.round(my + dy * 1.2);
+    for (let dy = -3; dy <= 3; dy++) {
+      for (let dx = -3; dx <= 3; dx++) {
+        const ix = Math.round(mx + dx * 3), iy = Math.round(my + dy * 3);
         const occ = ix >= 0 && iy >= 0 && ix < S && iy < S ? depth[iy * S + ix] : -Infinity;
         if (!(occ > d + bias)) lit++;
       }
     }
-    return lit / 25;
+    return lit / 49;
   };
 }
 
@@ -467,6 +495,9 @@ export function drawHead(head, positions, cam, width, height, look, { aa = 2, sk
   const eye = [0, 1, 2].map((k) => -(Rt[k * 3] * c.T[0] + Rt[k * 3 + 1] * c.T[1] + Rt[k * 3 + 2] * c.T[2]));
   const rgb = new Float32Array(W * H * 3);
   const depth = new Float32Array(W * H).fill(Infinity);
+  // Skin pixels keep their light, colour and highlights apart until the end, so the light can scatter.
+  const irr = new Float32Array(W * H * 3), alb = new Float32Array(W * H * 3), spc = new Float32Array(W * H * 3);
+  const tag = new Uint8Array(W * H);
   // Backdrop: a soft vertical gradient with a light vignette.
   const back = lin3(look.backdrop);
   for (let y = 0; y < H; y++) {
@@ -484,39 +515,45 @@ export function drawHead(head, positions, cam, width, height, look, { aa = 2, sk
   const ao = occlusion(head, positions, N);
   const shadow = shadowMap(head, positions, LIGHTS.key.dir);
 
-  const light = (P, n, albedo, { wrap = 0.35, sheen = 0, gloss = 50, ao: occ = 1, sss = true } = {}) => {
+  // Light at a point: how much arrives (d, to be multiplied by the surface's colour) and the highlights (s).
+  const lightParts = (P, n, { wrap = 0.35, sheen = 0, gloss = 50, ao: occ = 1, sss = true, bump = null } = {}) => {
     const V = normalise(sub(eye, P));
-    const out = [0, 0, 0];
-    const sh = shadow(P);
+    const d = [0, 0, 0], s = [0, 0, 0];
+    const sh = shadow(P, n);
+    const ns = bump ? normalise([n[0] + bump[0], n[1] + bump[1], n[2] + bump[2]]) : n;
     for (const [name, L] of Object.entries(LIGHTS)) {
       const nl = dot3(n, L.dir);
       const diff = Math.max(0, (nl + wrap) / (1 + wrap));
       const p = L.power * (name === "key" ? sh : 1) * (name === "rim" ? 0.4 : 1);
-      for (let k = 0; k < 3; k++) out[k] += albedo[k] * L.colour[k] * diff * p;
+      for (let k = 0; k < 3; k++) d[k] += L.colour[k] * diff * p;
       if (sss && wrap > 0) {
         // Light bleeding through skin near the shadow line warms it.
         const edge = Math.max(0, diff - Math.max(0, nl));
-        out[0] += albedo[0] * 0.5 * edge * p;
-        out[1] += albedo[1] * 0.12 * edge * p;
-        out[2] += albedo[2] * 0.06 * edge * p;
+        d[0] += 0.3 * edge * p;
+        d[1] += 0.07 * edge * p;
+        d[2] += 0.03 * edge * p;
       }
       if (sheen > 0 && nl > 0) {
         const Hh = normalise([L.dir[0] + V[0], L.dir[1] + V[1], L.dir[2] + V[2]]);
-        const nh = Math.max(0, dot3(n, Hh));
-        const fres = 0.03 + 0.97 * (1 - Math.max(0, dot3(n, V))) ** 5;
+        const nh = Math.max(0, dot3(ns, Hh));
+        const fres = 0.03 + 0.97 * (1 - Math.max(0, dot3(ns, V))) ** 5;
         const spec = sheen * (0.7 * nh ** gloss + 0.25 * nh ** (gloss / 5)) * (0.3 + 3 * fres) * nl * p;
-        for (let k = 0; k < 3; k++) out[k] += spec * L.colour[k];
+        for (let k = 0; k < 3; k++) s[k] += spec * L.colour[k];
       }
     }
     const sky = 0.2 * (0.6 + 0.4 * n[1]) * occ;
-    out[0] += albedo[0] * sky * 0.9;
-    out[1] += albedo[1] * sky * 0.95;
-    out[2] += albedo[2] * sky * 1.05;
-    return out;
+    d[0] += sky * 0.9;
+    d[1] += sky * 0.95;
+    d[2] += sky * 1.05;
+    return { d, s };
+  };
+  const light = (P, n, albedo, options) => {
+    const { d, s } = lightParts(P, n, options);
+    return [albedo[0] * d[0] + s[0], albedo[1] * d[1] + s[1], albedo[2] * d[2] + s[2]];
   };
 
   // Rasterise one part with perspective-correct attributes; `shade` returns linear RGB, or null to leave the pixel.
-  const draw = (pos, tris, shade) => {
+  const draw = (pos, tris, shade, id = 0) => {
     const Q = new Map();
     const q = (v) => {
       if (!Q.has(v)) Q.set(v, project(c, [pos[v * 3], pos[v * 3 + 1], pos[v * 3 + 2]]));
@@ -538,6 +575,7 @@ export function drawHead(head, positions, cam, width, height, look, { aa = 2, sk
         const col = shade(tri, p0, p1, p2, x, y);
         if (!col) return;
         depth[i] = z;
+        tag[i] = id;
         rgb[i * 3] = col[0];
         rgb[i * 3 + 1] = col[1];
         rgb[i * 3 + 2] = col[2];
@@ -631,25 +669,37 @@ export function drawHead(head, positions, cam, width, height, look, { aa = 2, sk
       return light(P, n, socket, { ao: 0.6 });
     });
   }
-  // Skin.
-  draw(positions, partTris("skin"), (tri, p0, p1, p2) => {
+  // Skin (tag 1): its highlights are broken up by fine bumps.
+  draw(positions, partTris("skin"), (tri, p0, p1, p2, x, y) => {
     const [P, n] = at(tri, p0, p1, p2);
     const [u, v] = uvAt(tri, p0, p1, p2);
     const t = sampleSkin(u, v);
     const occ = aoAt(tri, p0, p1, p2);
-    return light(P, n, [t[0] * occ, t[1] * occ, t[2] * occ], { sheen: 0.16 * t[3], gloss: 45, ao: occ });
-  });
+    const bump = [70, 71, 72].map((k) => 0.5 * (noise3(P[0] * 14, P[1] * 14, P[2] * 14, seed + k) - 0.5));
+    const { d, s } = lightParts(P, n, { wrap: 0.2, sheen: 0.21 * t[3], gloss: 45, ao: occ, bump });
+    const i = (y * W + x) * 3;
+    const out = [0, 0, 0];
+    for (let k = 0; k < 3; k++) {
+      alb[i + k] = t[k] * occ;
+      irr[i + k] = d[k];
+      spc[i + k] = s[k];
+      out[k] = t[k] * occ * d[k] + s[k];
+    }
+    return out;
+  }, 1);
   // Eyes: wet and glossy, with catchlights.
   for (const name of ["scleraL", "scleraR"]) {
     draw(positions, partTris(name), (tri, p0, p1, p2) => {
       const [P, n] = at(tri, p0, p1, p2);
       const [u, v] = uvAt(tri, p0, p1, p2);
-      const col = light(P, n, eyeAt(u, v, look, seed), { wrap: 0.1, sss: false, ao: 0.85 }).map((k) => k * 0.85);
+      // The lids shade the eyeball: darker under the upper lid and into the corners.
+      const lid = (1 - 0.45 * smooth(0.1, 0.45, n[1])) * (1 - 0.25 * smooth(0.3, 0.65, Math.abs(n[0])));
+      const col = light(P, n, eyeAt(u, v, look, seed), { wrap: 0.1, sss: false, ao: 0.85 }).map((k) => k * lid);
       const V = normalise(sub(eye, P));
       for (const L of [LIGHTS.key, LIGHTS.fill]) {
         const Hh = normalise([L.dir[0] + V[0], L.dir[1] + V[1], L.dir[2] + V[2]]);
         const nh = Math.max(0, dot3(n, Hh));
-        const s = (2.5 * nh ** 600 + 0.08 * nh ** 40) * L.power * (L === LIGHTS.key ? shadow(P) : 1);
+        const s = (2.5 * nh ** 600 + 0.08 * nh ** 40) * L.power * (L === LIGHTS.key ? shadow(P, n) : 1);
         for (let k = 0; k < 3; k++) col[k] += s;
       }
       return col;
@@ -663,47 +713,115 @@ export function drawHead(head, positions, cam, width, height, look, { aa = 2, sk
     draw(positions, tris, (tri, p0, p1, p2, x, y) => {
       const [u, v] = uvAt(tri, p0, p1, p2);
       const strand = noise3(u * 140, 0, 0, seed + 40);
-      if (hash3(x, y, 0, seed + 41) > 0.25 + 0.6 * smooth(0.45, 0.8, strand) * (1 - Math.abs(v - 0.5))) return null;
+      if (hash3(x, y, 0, seed + 41) > 0.1 + 0.55 * smooth(0.45, 0.8, strand) * (1 - Math.abs(v - 0.5))) return null;
       return lashCol.map((k) => k * 0.6);
     });
   }
-  // Hair: strands running away from the crown's whorl, a glossy band, and a hairline that thins out.
+  // Hair, strand by strand: the scalp's shell is drawn in many layers from the tips down to the roots. Every
+  // small cell of scalp roots one strand with its own length and shade; a layer shows the strand's cross-section
+  // at that height, moved along the way the hair is combed (away from the crown's whorl, in loose clumps).
   if (look.hairStyle && look.hairStyle !== "shaved") {
     const shell = hairShell(head, positions, look.hairStyle);
-    const hp = shell.position;
-    const hn = new Float32Array(hp.length);
+    const tip = shell.position, root = shell.base;
+    const nV = tip.length / 3;
+    const hn = new Float32Array(tip.length);
     for (let t = 0; t < shell.index.length; t += 3) {
       const [a, b, d] = [shell.index[t], shell.index[t + 1], shell.index[t + 2]];
-      const pa = [hp[a * 3], hp[a * 3 + 1], hp[a * 3 + 2]];
-      const nn = cross(sub([hp[b * 3], hp[b * 3 + 1], hp[b * 3 + 2]], pa), sub([hp[d * 3], hp[d * 3 + 1], hp[d * 3 + 2]], pa));
+      const pa = [tip[a * 3], tip[a * 3 + 1], tip[a * 3 + 2]];
+      const nn = cross(sub([tip[b * 3], tip[b * 3 + 1], tip[b * 3 + 2]], pa), sub([tip[d * 3], tip[d * 3 + 1], tip[d * 3 + 2]], pa));
       for (const i of [a, b, d]) for (let k = 0; k < 3; k++) hn[i * 3 + k] += nn[k];
+    }
+    const len = new Float32Array(nV);
+    let longest = 0;
+    for (let v = 0; v < nV; v++) {
+      len[v] = Math.hypot(tip[v * 3] - root[v * 3], tip[v * 3 + 1] - root[v * 3 + 1], tip[v * 3 + 2] - root[v * 3 + 2]);
+      longest = Math.max(longest, len[v]);
+    }
+    // The hairline is worked out for every pixel from the template's frame (per vertex it comes out jagged),
+    // with a ragged edge where the hairs get shorter and fewer.
+    const home = new Float32Array(tip.length), clear = new Float32Array(nV);
+    const earClear = earClearance(head);
+    for (let v = 0; v < nV; v++) {
+      const id = shell.vertex[v];
+      home.set(head.positions.subarray(id * 3, id * 3 + 3), v * 3);
+      clear[v] = earClear[id];
     }
     const tris = [];
     for (let t = 0; t < shell.index.length; t += 3) tris.push([shell.index[t], shell.index[t + 1], shell.index[t + 2]]);
+    const layers = Math.min(40, Math.max(8, Math.round(longest / 0.04)));
+    const cell = 0.06;
     const whorl = [0.6, 13.2, -3.2];
     const hairCol = lin3(look.hair);
-    draw(hp, tris, (tri, p0, p1, p2, x, y) => {
-      const P = interp(hp, tri, p0, p1, p2);
-      const n = normalise(interp(hn, tri, p0, p1, p2));
-      const alpha = p0 * shell.alpha[tri[0]] + p1 * shell.alpha[tri[1]] + p2 * shell.alpha[tri[2]];
-      let d = sub(P, whorl);
-      d = sub(d, n.map((k) => k * dot3(d, n)));
-      const T = normalise(d);
-      const B = normalise(cross(n, T));
-      const a = dot3(P, T), b = dot3(P, B);
-      const strands = 0.6 * noise3(b * 55, a * 1.6, P[2] * 0.5, seed + 50) + 0.4 * noise3(b * 130, a * 3, 0, seed + 51);
-      if (hash3(x, y, 1, seed + 52) > alpha * (0.55 + 0.8 * strands)) return null;
-      const albedo = hairCol.map((k) => k * (0.55 + 0.9 * strands));
-      const col = light(P, n, albedo, { wrap: 0.1, sss: false, ao: 0.8 }).map((k) => k * 0.9);
-      const V = normalise(sub(eye, P));
-      const L = LIGHTS.key;
-      const Hh = normalise([L.dir[0] + V[0], L.dir[1] + V[1], L.dir[2] + V[2]]);
-      const th = dot3(T, Hh);
-      const sinTH = Math.sqrt(Math.max(0, 1 - th * th));
-      const s = shadow(P) * L.power;
-      for (let k = 0; k < 3; k++) col[k] += s * (0.035 * sinTH ** 80 + 0.18 * albedo[k] * sinTH ** 12);
-      return col;
-    });
+    const lean = look.hairLean ?? 0.9;
+    for (let layer = layers; layer >= 1; layer--) {
+      const t = layer / layers;
+      const hp = new Float32Array(tip.length);
+      for (let i = 0; i < hp.length; i++) hp[i] = root[i] + (tip[i] - root[i]) * t;
+      draw(hp, tris, (tri, p0, p1, p2) => {
+        const H0 = interp(home, tri, p0, p1, p2);
+        const inside = hairlineWeight(H0[0], H0[1], H0[2]) * (p0 * clear[tri[0]] + p1 * clear[tri[1]] + p2 * clear[tri[2]]);
+        if (inside <= 0) return null;
+        const ragged = inside < 1 ? 0.5 * (noise3(H0[0] * 1.6, H0[1] * 1.6, H0[2] * 1.6, seed + 58) - 0.5) : 0;
+        const alpha = smooth(0.15, 0.85, inside + ragged);
+        if (alpha < 0.03) return null;
+        const R0 = interp(root, tri, p0, p1, p2);
+        const n = normalise(interp(hn, tri, p0, p1, p2));
+        const l = p0 * len[tri[0]] + p1 * len[tri[1]] + p2 * len[tri[2]];
+        let d = sub(R0, whorl);
+        const dn = dot3(d, n);
+        d = normalise([d[0] - n[0] * dn, d[1] - n[1] * dn, d[2] - n[2] * dn]);
+        const B = cross(n, d);
+        const sway = 1.2 * (noise3(R0[0] * 0.9, R0[1] * 0.9, R0[2] * 0.9, seed + 55) - 0.5);
+        const T = normalise([d[0] + sway * B[0], d[1] + sway * B[1], d[2] + sway * B[2]]);
+        // The strand passing here is rooted further back along the comb.
+        const back = lean * l * t * t;
+        const Q = [R0[0] - T[0] * back, R0[1] - T[1] * back, R0[2] - T[2] * back];
+        const gx = Math.floor(Q[0] / cell), gy = Math.floor(Q[1] / cell), gz = Math.floor(Q[2] / cell);
+        if (hash3(gx, gy, gz, seed + 50) > alpha * 1.1) return null; // fewer toward the hairline
+        const tall = (0.5 + 0.5 * hash3(gx, gy, gz, seed + 51)) * (0.75 + 0.5 * noise3(R0[0] * 1.3, R0[1] * 1.3, R0[2] * 1.3, seed + 56)) * (0.25 + 0.75 * alpha);
+        if (t > tall) return null;
+        const cx = (gx + 0.3 + 0.4 * hash3(gx, gy, gz, seed + 52)) * cell;
+        const cy = (gy + 0.3 + 0.4 * hash3(gx, gy, gz, seed + 53)) * cell;
+        const cz = (gz + 0.3 + 0.4 * hash3(gx, gy, gz, seed + 54)) * cell;
+        if (Math.hypot(Q[0] - cx, Q[1] - cy, Q[2] - cz) > cell * (0.55 - 0.22 * t)) return null;
+        const P = interp(hp, tri, p0, p1, p2);
+        const tone = (0.7 + 0.6 * hash3(gx, gy, gz, seed + 57)) * (0.3 + 0.7 * t); // darker toward the roots
+        const albedo = hairCol.map((k) => k * tone);
+        const col = light(P, n, albedo, { wrap: 0.3, sss: false, ao: 0.8 });
+        // A soft band of shine across the strands.
+        const S = normalise([n[0] + T[0] * lean * 1.5 * t, n[1] + T[1] * lean * 1.5 * t, n[2] + T[2] * lean * 1.5 * t]);
+        const V = normalise(sub(eye, P));
+        const L = LIGHTS.key;
+        const Hh = normalise([L.dir[0] + V[0], L.dir[1] + V[1], L.dir[2] + V[2]]);
+        const th = dot3(S, Hh);
+        const sinTH = Math.sqrt(Math.max(0, 1 - th * th));
+        const shine = shadow(P, n) * L.power * t;
+        for (let k = 0; k < 3; k++) col[k] += shine * (0.03 * sinTH ** 60 + 0.2 * albedo[k] * sinTH ** 10);
+        return col;
+      });
+    }
+  }
+
+  // Light scatters under the skin: what arrives at skin pixels is blurred, red furthest, before it meets the
+  // skin's own colour. Fine marks painted on the skin stay sharp.
+  {
+    const count = W * H;
+    const mask = new Float32Array(count);
+    for (let i = 0; i < count; i++) mask[i] = tag[i] === 1 ? 1 : 0;
+    const pxPerCm = c.f / c.T[2];
+    const blur3 = (a, r) => boxBlur(boxBlur(boxBlur(a, W, H, r), W, H, r), W, H, r);
+    const reach = [0.26, 0.13, 0.07], keep = [0.3, 0.5, 0.65];
+    for (let k = 0; k < 3; k++) {
+      const r = Math.max(1, Math.round(reach[k] * pxPerCm));
+      const src = new Float32Array(count);
+      for (let i = 0; i < count; i++) if (mask[i]) src[i] = irr[i * 3 + k];
+      const num = blur3(src, r), den = blur3(mask, r);
+      for (let i = 0; i < count; i++) {
+        if (!mask[i]) continue;
+        const soft = num[i] / Math.max(den[i], 1e-4);
+        rgb[i * 3 + k] = alb[i * 3 + k] * (keep[k] * irr[i * 3 + k] + (1 - keep[k]) * soft) + spc[i * 3 + k];
+      }
+    }
   }
 
   // Down to the output size, with a gentle highlight roll-off and a little grain.
@@ -746,7 +864,9 @@ export const LOOKS = [
 export function madeUpPhoto(head, { seed = 1, size = 900, look = LOOKS[0], smile = 0, distance = 120, turn = 0.08, hair = true, aa = 2, draw = true } = {}) {
   const rand = seeded(seed);
   const neutral = madeUpShape(head, rand);
-  const weights = smile ? { mouthSmile_L: smile, mouthSmile_R: smile, cheekSquint_L: smile * 0.6, cheekSquint_R: smile * 0.6, eyeSquint_L: smile * 0.3, eyeSquint_R: smile * 0.3 } : {};
+  // Relaxed lids (the template's eyes are wide open), and a smile that reaches the cheeks and eyes.
+  const weights = { eyeBlink_L: 0.07, eyeBlink_R: 0.07, eyeSquint_L: 0.22, eyeSquint_R: 0.22 };
+  if (smile) Object.assign(weights, { mouthSmile_L: smile, mouthSmile_R: smile, cheekSquint_L: smile * 0.6, cheekSquint_R: smile * 0.6, eyeSquint_L: 0.22 + smile * 0.3, eyeSquint_R: 0.22 + smile * 0.3 });
   const pose = posed(head, weights, neutral);
   const yaw = (rand() * 2 - 1) * turn, pitch = (rand() * 2 - 1) * turn * 0.6, roll = (rand() * 2 - 1) * turn * 0.4;
   const R = rotationXYZ(pitch, yaw, roll);
