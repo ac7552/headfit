@@ -17,9 +17,10 @@ then drag the 41 pins onto their spots. The six samples are made up, not photos 
 the head by a known amount, paints its skin (uneven tone, blush, freckles, stubble, brows, lips), and lights and
 draws it like a studio portrait: a soft key light with shadows, light scattering under the skin, sheen, wet eyes
 under relaxed lids, and hair drawn strand by strand, cropped on three of them and long on the other three (long
-hair covers the ears, so those samples leave the ear pins out). Red pins are
-spots; blue pins slide along an outline (the jaw line, the rim of an ear), so only how far out they sit matters. A
-side photo is optional. **Download .glb** saves the head (metres, textures included).
+hair covers the ears, so those samples leave the ear pins out).
+
+Red pins are spots; blue pins slide along an outline (the jaw line, the rim of an ear), so only how far out they
+sit matters. A side photo is optional. **Download .glb** saves the head (metres, textures included).
 
 Tests and checks need Node 22:
 
@@ -85,8 +86,8 @@ fitted head meets the pins to within about 2 pixels.
   beside the face from every angle, and there are no fringes, curls or tied-back styles.
 - Side photos: the code path exists but has no samples or measured results yet.
 - Reading a smile fully (0.5 reads as 0.31).
-- Made-up faces that pass for photos: they still read as computer-drawn. Longer hair, more varied face shapes
-  and skin detail from openly licensed texture photos would help.
+- Made-up faces that pass for photos: they still read as computer-drawn. More varied face shapes and skin detail
+  from openly licensed texture photos would help.
 - Posing the camera and bending the face together (the pose that needs the least bending), to help one-photo depth.
 - Saving heads in the browser between visits.
 

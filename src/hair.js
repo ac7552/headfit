@@ -1,6 +1,6 @@
 // Close-cut hair as a shell over the scalp: the scalp's own triangles lifted along their normals, thinning to
 // nothing at the hairline. It follows the fitted head exactly. Its colour is read from the photo above the
-// forehead. Longer styles need hair cards (MakeHuman's CC0 hair, or MetaHuman's), which this does not do yet.
+// forehead. Longer styles are grown as strands in strands.js.
 
 import { project } from "./camera.js";
 import { vertexNormals } from "./head.js";
