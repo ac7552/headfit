@@ -7,7 +7,7 @@ import { fitHead } from "../src/fit.js";
 import { hairShell, scalp } from "../src/hair.js";
 import { posed } from "../src/head.js";
 import { mul3, nearestRotation, rotation, solve } from "../src/linalg.js";
-import { PINS, pinsFromPoints, pointOf } from "../src/pins.js";
+import { PINS, pointOf } from "../src/pins.js";
 import { startFront } from "../src/start.js";
 import { colliders, growHair } from "../src/strands.js";
 import { LOOKS, madeUpPhoto, truePins } from "../src/synth.js";
@@ -105,13 +105,6 @@ test("three clicks give a first guess near the true pins", () => {
   const off = Object.keys(pins).map((k) => Math.hypot(pins[k][0] - start.pins[k][0], pins[k][1] - start.pins[k][1]));
   const mean = off.reduce((a, b) => a + b, 0) / off.length;
   assert.ok(mean < 30, `first guess ${mean.toFixed(1)} px off on average`);
-});
-
-test("pins from a 189-point face template", () => {
-  const pts = Array.from({ length: 189 }, (_, i) => [i, 2 * i]);
-  const { pins } = pinsFromPoints(pts);
-  assert.deepEqual(pins.eyeOuterRight, [18, 36]);
-  assert.deepEqual(pins.noseBridge, [54, 108]); // the middle of points 51 and 57
 });
 
 test("hair shell sits over the scalp and not the face", () => {

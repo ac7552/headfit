@@ -86,8 +86,8 @@ fitted head meets the pins to within about 2 pixels.
   beside the face from every angle, and there are no fringes, curls or tied-back styles.
 - Side photos: the code path exists but has no samples or measured results yet.
 - Reading a smile fully (0.5 reads as 0.31).
-- Made-up faces that pass for photos: they still read as computer-drawn. More varied face shapes and skin detail
-  from openly licensed texture photos would help.
+- Made-up faces that pass for photos: they still read as computer-drawn. More varied face shapes and finer
+  procedural skin detail would help.
 - Posing the camera and bending the face together (the pose that needs the least bending), to help one-photo depth.
 - Saving heads in the browser between visits.
 

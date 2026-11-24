@@ -4,7 +4,7 @@ import { OrbitControls } from "./vendor/OrbitControls.js";
 import { ATLAS } from "../src/bake.js";
 import { hairShell } from "../src/hair.js";
 import { readHead, vertexNormals } from "../src/head.js";
-import { PINS, pinsFromPoints, SIDE_PINS } from "../src/pins.js";
+import { PINS, SIDE_PINS } from "../src/pins.js";
 import { FRONT_CLICKS, SIDE_CLICKS, startFront, startSide } from "../src/start.js";
 import { growHair, STRAND_STYLES } from "../src/strands.js";
 
@@ -71,18 +71,15 @@ $("sample").addEventListener("change", async (e) => {
   const id = e.target.value;
   if (!id) return;
   await headReady;
-  const [blob, tem] = await Promise.all([
+  const [blob, meta] = await Promise.all([
     fetch(`samples/${id}.jpg`).then((r) => r.blob()),
     fetch(`samples/${id}.json`).then((r) => r.json()),
   ]);
   const photo = await photoFromBlob(blob);
   const k = photo.scale;
-  // Samples carry their pins; a Face Research Lab style template (189 points) works too.
-  photo.pins = tem.pins
-    ? Object.fromEntries(Object.entries(tem.pins).map(([name, [x, y]]) => [name, [x * k, y * k]]))
-    : pinsFromPoints(tem.points.map(([x, y]) => [x * k, y * k])).pins;
-  if (tem.distance) $("distance").value = tem.distance >= 80 ? "120" : "45";
-  $("ears").checked = Boolean(tem.earsHidden); // long hair covers the ears, so their pins are left out
+  photo.pins = Object.fromEntries(Object.entries(meta.pins).map(([name, [x, y]]) => [name, [x * k, y * k]]));
+  if (meta.distance) $("distance").value = meta.distance >= 80 ? "120" : "45";
+  $("ears").checked = Boolean(meta.earsHidden); // long hair covers the ears, so their pins are left out
   photo.clicks = null;
   setView("front");
   state.photos.front = photo;
